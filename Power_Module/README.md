@@ -24,7 +24,7 @@ nRF5 SDK is being deprecated in favour of nRF Connect SDK but this will be a fal
 6. Click rebuild all
 7. the built .bin file may be found in the _build folder located in the arm5_no_packs folder.
 
-##Flashing
+## Flashing
 
 Flashing is done using DAPLink, an open source version of J-Link. It uses [pyOCD](https://pyocd.io/) as the software and [nanoDAP](https://github.com/wuxx/nanoDAP-HS/tree/master) as the hardware.
 1. Install pyOCD using `pip install pyocd`
