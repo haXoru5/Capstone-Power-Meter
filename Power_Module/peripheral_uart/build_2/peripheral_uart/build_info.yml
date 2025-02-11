@@ -1,0 +1,50 @@
+cmake:
+  application:
+    configuration-dir: C:/Users/micha/peripheral_uart
+    source-dir: C:/Users/micha/peripheral_uart
+  board:
+    name: blinky_test
+    qualifiers: nrf52840
+    revision: 
+  devicetree:
+    bindings-dirs:
+     - C:/ncs/v2.9.0/nrf/dts/bindings
+     - C:/ncs/v2.9.0/zephyr/dts/bindings
+    files:
+     - C:/ncs/v2.9.0/zephyr/boards/boards/CycleSense/blinky_test/blinky_test.dts
+     - C:/Users/micha/peripheral_uart/app.overlay
+    include-dirs:
+     - C:/ncs/v2.9.0/nrf/include
+     - C:/ncs/v2.9.0/nrf/dts
+     - C:/ncs/v2.9.0/zephyr/include
+     - C:/ncs/v2.9.0/zephyr/include/zephyr
+     - C:/ncs/v2.9.0/zephyr/dts/common
+     - C:/ncs/v2.9.0/zephyr/dts/x86
+     - C:/ncs/v2.9.0/zephyr/dts/xtensa
+     - C:/ncs/v2.9.0/zephyr/dts/sparc
+     - C:/ncs/v2.9.0/zephyr/dts/riscv
+     - C:/ncs/v2.9.0/zephyr/dts/posix
+     - C:/ncs/v2.9.0/zephyr/dts/nios2
+     - C:/ncs/v2.9.0/zephyr/dts/arm64
+     - C:/ncs/v2.9.0/zephyr/dts/arm
+     - C:/ncs/v2.9.0/zephyr/dts/arc
+     - C:/ncs/v2.9.0/zephyr/dts
+    user-files:
+     - C:/Users/micha/peripheral_uart/app.overlay
+  kconfig:
+    files:
+     - C:/ncs/v2.9.0/zephyr/boards/boards/CycleSense/blinky_test/blinky_test_defconfig
+     - C:/Users/micha/peripheral_uart/prj.conf
+     - C:/Users/micha/peripheral_uart/build_2/peripheral_uart/zephyr/.config.sysbuild
+    user-files:
+     - C:/Users/micha/peripheral_uart/prj.conf
+  toolchain:
+    name: zephyr
+    path: C:/ncs/toolchains/b620d30767/opt/zephyr-sdk
+  vendor-specific:
+    nordic:
+      svdfile: C:/ncs/v2.9.0/modules/hal/nordic/nrfx/mdk/nrf52840.svd
+  zephyr:
+    version: 3.7.99
+    zephyr-base: C:/ncs/v2.9.0/zephyr
+version: 0.1.0

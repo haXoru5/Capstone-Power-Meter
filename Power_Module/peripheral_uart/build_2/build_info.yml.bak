@@ -1,0 +1,6 @@
+west:
+  command: C:\ncs\toolchains\b620d30767\opt\bin\Scripts\west build --build-dir c:/Users/micha/peripheral_uart/build_2
+    c:/Users/micha/peripheral_uart --pristine --board blinky_test/nrf52840 -- -DNCS_TOOLCHAIN_VERSION=NONE
+    -DBOARD_ROOT=c:\Users\micha\blinky;c:\Users\micha\peripheral_status;c:\Users\micha\peripheral_uart;c:\Users\micha\central_uart;c:\Users\micha\adc_sequence;c:\Users\micha\spi_flash;c:\Users\micha\Documents\GitHub\ncs-inter\v2.9.0-v2.7.0\l5\l5_e1_sol;c:\Users\micha\Documents\GitHub\ncs-fund\v2.9.0-v2.7.0\l6\l6_e1_sol;c:\Users\micha\peripheral_uart_1
+  topdir: c:\ncs\v2.9.0
+  version: 1.2.0

@@ -1,0 +1,7 @@
+default: peripheral_uart
+build_dir: C:/Users/micha/peripheral_uart/build_2
+domains:
+  - name: peripheral_uart
+    build_dir: C:/Users/micha/peripheral_uart/build_2/peripheral_uart
+flash_order:
+  - peripheral_uart
