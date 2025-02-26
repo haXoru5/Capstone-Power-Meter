@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "spi.h": "c",
+        "icm42688.h": "c"
+    }
+}

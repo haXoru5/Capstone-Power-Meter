@@ -1,0 +1,2 @@
+osource "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/boards/shields/*/Kconfig.shield"
+osource "C:/ncs/v2.9.0/nrf/boards/shields/*/Kconfig.shield"

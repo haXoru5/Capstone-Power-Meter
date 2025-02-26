@@ -1,0 +1,47 @@
+cmake:
+  application:
+    configuration-dir: C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol
+    source-dir: C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol
+  board:
+    name: blinky_test
+    qualifiers: nrf52840
+    revision: 
+  devicetree:
+    bindings-dirs:
+     - C:/ncs/v2.9.0/nrf/dts/bindings
+     - C:/ncs/v2.9.0/zephyr/dts/bindings
+    files:
+     - C:/ncs/v2.9.0/zephyr/boards/boards/CycleSense/blinky_test/blinky_test.dts
+    include-dirs:
+     - C:/ncs/v2.9.0/nrf/include
+     - C:/ncs/v2.9.0/nrf/dts
+     - C:/ncs/v2.9.0/zephyr/include
+     - C:/ncs/v2.9.0/zephyr/include/zephyr
+     - C:/ncs/v2.9.0/zephyr/dts/common
+     - C:/ncs/v2.9.0/zephyr/dts/x86
+     - C:/ncs/v2.9.0/zephyr/dts/xtensa
+     - C:/ncs/v2.9.0/zephyr/dts/sparc
+     - C:/ncs/v2.9.0/zephyr/dts/riscv
+     - C:/ncs/v2.9.0/zephyr/dts/posix
+     - C:/ncs/v2.9.0/zephyr/dts/nios2
+     - C:/ncs/v2.9.0/zephyr/dts/arm64
+     - C:/ncs/v2.9.0/zephyr/dts/arm
+     - C:/ncs/v2.9.0/zephyr/dts/arc
+     - C:/ncs/v2.9.0/zephyr/dts
+  kconfig:
+    files:
+     - C:/ncs/v2.9.0/zephyr/boards/boards/CycleSense/blinky_test/blinky_test_defconfig
+     - C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/prj.conf
+     - C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/l5_e1_sol/zephyr/.config.sysbuild
+    user-files:
+     - C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/prj.conf
+  toolchain:
+    name: zephyr
+    path: C:/ncs/toolchains/b620d30767/opt/zephyr-sdk
+  vendor-specific:
+    nordic:
+      svdfile: C:/ncs/v2.9.0/modules/hal/nordic/nrfx/mdk/nrf52840.svd
+  zephyr:
+    version: 3.7.99
+    zephyr-base: C:/ncs/v2.9.0/zephyr
+version: 0.1.0

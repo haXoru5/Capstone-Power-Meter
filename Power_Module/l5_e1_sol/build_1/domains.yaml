@@ -1,0 +1,7 @@
+default: l5_e1_sol
+build_dir: C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1
+domains:
+  - name: l5_e1_sol
+    build_dir: C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/l5_e1_sol
+flash_order:
+  - l5_e1_sol

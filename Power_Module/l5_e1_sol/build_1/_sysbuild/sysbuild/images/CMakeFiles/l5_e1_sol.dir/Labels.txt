@@ -1,0 +1,13 @@
+# Target labels
+ l5_e1_sol
+# Source files and their labels
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/CMakeFiles/l5_e1_sol
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/CMakeFiles/l5_e1_sol.rule
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/CMakeFiles/l5_e1_sol-complete.rule
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-build.rule
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-configure.rule
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-download.rule
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-install.rule
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-mkdir.rule
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-patch.rule
+C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-update.rule

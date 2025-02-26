@@ -6,25 +6,28 @@
 #include <zephyr/sys/printk.h>
 #include <stdio.h>
 
-#define ICM42688_REG_PWR_MGMT_0     0x1F  // Power Management
+#define ICM42688_REG_PWR_MGMT_0     0x4E  // Power Management
+#define ICM42688_GYRO_LOW_NOISE_MODE 0x0C // Enable Low-Noise Mode for Gyro
+
 #define ICM42688_REG_GYRO_CONFIG0   0x4F  // Gyro Configuration
+#define ICM42688_GYRO_1000DPS        0x06 // 1000 dps FSR
 
 #define ICM42688_REG_GYRO_Y_OUT_H   0x27  // Gyro Y-axis High Byte
 #define ICM42688_REG_GYRO_Y_OUT_L   0x28  // Gyro Y-axis Low Byte
-#define ICM42688_REG_RESET          0x4B  // Device Reset
-#define ICM42688_RESET_VALUE        0x01  // Reset value
+
+#define ICM42688_REG_RESET          0x11  // Device Reset
+#define ICM42688_RESET_VALUE        0x00  // Reset value
+
 #define ICM42688_REG_WHO_AM_I       0x75  // WHO_AM_I register
 #define ICM42688_WHO_AM_I_VALUE     0x47  // Expected WHO_AM_I value for ICM42688
 
-#define ICM42688_GYRO_LOW_NOISE_MODE 0x0F // Enable Low-Noise Mode for Gyro
-#define ICM42688_GYRO_1000DPS        0x02 // 1000 dps FSR
 
 // Get SPI device from devicetree
 static const struct device *spi_dev = DEVICE_DT_GET(DT_NODELABEL(spi1));
 
 static struct spi_config spi_cfg = {
     .frequency = 1000000,  // 1MHz SPI speed
-    .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_MODE_CPHA,
+    .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB,
     .slave = 0
 };
 
@@ -122,7 +125,7 @@ void main(void) {
     ret = icm42688_verify_comms();
     if (ret >= 0) {
         printk("ICM42688 communication verification success\n");
-        return;
+        //return;
     } else{
         printk("ICM42688 communication verification failed\n");
     }
@@ -142,7 +145,7 @@ void main(void) {
         // Combine high and low bytes
         gyro_y = ((int16_t)gyro_y_h << 8) | gyro_y_l;
 
-        //printk("Gyro Y-axis: %d\n", gyro_y);
+        printk("Gyro Y-axis: %d\n", gyro_y);
         k_msleep(100);
     }
 }

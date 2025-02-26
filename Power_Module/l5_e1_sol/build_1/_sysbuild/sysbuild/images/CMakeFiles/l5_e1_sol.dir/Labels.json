@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/CMakeFiles/l5_e1_sol"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/CMakeFiles/l5_e1_sol.rule"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/CMakeFiles/l5_e1_sol-complete.rule"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-build.rule"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-configure.rule"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-download.rule"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-install.rule"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-patch.rule"
+		},
+		{
+			"file" : "C:/Users/micha/Documents/GitHub/Capstone-Power-Meter/Power_Module/l5_e1_sol/build_1/_sysbuild/sysbuild/images/l5_e1_sol-prefix/src/l5_e1_sol-stamp/l5_e1_sol-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"l5_e1_sol"
+		],
+		"name" : "l5_e1_sol"
+	}
+}
