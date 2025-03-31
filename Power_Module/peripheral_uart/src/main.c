@@ -733,7 +733,8 @@ int main(void)
 	for (;;) {
 		dk_set_led(RUN_STATUS_LED, (++blink_status) % 2);
 		k_sleep(K_MSEC(RUN_LED_BLINK_INTERVAL));
-		//printf("This is a packet\n");
+		
+		/* //printf("This is a packet\n");
 		static int i = 0;
 		while(i==0)
 		{
@@ -841,7 +842,7 @@ int main(void)
 							    channel_cfgs[channel_index].gain,
 							    CONFIG_SEQUENCE_RESOLUTION, &val_mv);
 
-				/* conversion to mV may not be supported, skip if not */
+				// conversion to mV may not be supported, skip if not
 				if ((err < 0) || vrefs_mv[channel_index] == 0) {
 					//printf(" (value in mV not available)\n");
 				} else {
@@ -868,15 +869,16 @@ int main(void)
     	} else {
        		printk("Sent int32_t: %f over NUS\n", torque);
     	}
-		/*
+		
 		err = bt_nus_send(NULL, MESSAGE, strlen(MESSAGE));
 		if (err) {
 			printk("Failed to send message: %d\n", err);
 		} else {
 			printk("Message sent successfully!\n");
-		}\
-		*/
+		} */
+		
 	}
+	
 	
 }
 
