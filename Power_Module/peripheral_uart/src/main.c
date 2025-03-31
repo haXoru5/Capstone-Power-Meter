@@ -20,6 +20,7 @@
 
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/spi.h>
+#include <zephyr/drivers/sensor.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/uuid.h>
@@ -38,8 +39,106 @@
 
 #include <zephyr/logging/log.h>
 
-#define LOG_MODULE_NAME peripheral_uart
-LOG_MODULE_REGISTER(LOG_MODULE_NAME);
+//FROM IMU Sample
+LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
+ 
+ static struct sensor_trigger data_trigger;
+ 
+ /* Flag set from IMU device irq handler */
+ static volatile int irq_from_device;
+ 
+
+//ADC init
+/* ADC node from the devicetree. */
+#define ADC_NODE DT_ALIAS(adc0)
+
+/* Auxiliary macro to obtain channel vref, if available. */
+#define CHANNEL_VREF(node_id) DT_PROP_OR(node_id, zephyr_vref_mv, 0)
+
+/* Data of ADC device specified in devicetree. */
+static const struct device *adc = DEVICE_DT_GET(ADC_NODE);
+
+/* Data array of ADC channels for the specified ADC. */
+static const struct adc_channel_cfg channel_cfgs[] = {
+	DT_FOREACH_CHILD_SEP(ADC_NODE, ADC_CHANNEL_CFG_DT, (,))};
+
+/* Data array of ADC channel voltage references. */
+static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))};
+
+/* Get the number of channels defined on the DTS. */
+#define CHANNEL_COUNT ARRAY_SIZE(channel_cfgs)
+#define CONFIG_SEQUENCE_SAMPLES 32
+
+/*Cal Data*/
+#define CAL_SLOPE -0.35
+#define CAL_OFFSET 827
+
+/*RPM conversion constant*/
+#define RADS_TO_RPM 9.5493
+
+/*Battery range*/
+#define BATTERY_MIN 3400
+#define BATTERY_MAX 4200
+#define DIVIDER_RATIO 5.5455
+
+ /*
+  * Get a device structure from a devicetree node from alias
+  * "6dof_motion_drdy0".
+  */
+ static const struct device *get_6dof_motion_device(void)
+ {
+         const struct device *const dev = DEVICE_DT_GET(DT_ALIAS(6dof_motion_drdy0));
+ 
+         if (!device_is_ready(dev)) {
+                 printk("\nError: Device \"%s\" is not ready; "
+                        "check the driver initialization logs for errors.\n",
+                        dev->name);
+                 return NULL;
+         }
+ 
+         printk("Found device \"%s\", getting sensor data\n", dev->name);
+         return dev;
+ }
+ 
+ static const char *now_str(void)
+ {
+         static char buf[16]; /* ...HH:MM:SS.MMM */
+         uint32_t now = k_uptime_get_32();
+         unsigned int ms = now % MSEC_PER_SEC;
+         unsigned int s;
+         unsigned int min;
+         unsigned int h;
+ 
+         now /= MSEC_PER_SEC;
+         s = now % 60U;
+         now /= 60U;
+         min = now % 60U;
+         now /= 60U;
+         h = now;
+ 
+         snprintf(buf, sizeof(buf), "%u:%02u:%02u.%03u", h, min, s, ms);
+         return buf;
+ }
+ 
+ static void handle_6dof_motion_drdy(const struct device *dev, const struct sensor_trigger *trig)
+ {
+         if (trig->type == SENSOR_TRIG_DATA_READY) {
+                 int rc = sensor_sample_fetch_chan(dev, trig->chan);
+ 
+                 if (rc < 0) {
+                         printf("sample fetch failed: %d\n", rc);
+                         printf("cancelling trigger due to failure: %d\n", rc);
+                         (void)sensor_trigger_set(dev, trig, NULL);
+                         return;
+                 } else if (rc == 0) {
+                         irq_from_device = 1;
+                 }
+         }
+ }
+ //END IMU Sample
+
+//#define LOG_MODULE_NAME peripheral_uart
+//LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #define STACKSIZE CONFIG_BT_NUS_THREAD_STACK_SIZE
 #define PRIORITY 7
@@ -61,7 +160,6 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 //USER DEFINED
 #define MESSAGE "Hello from Peripheral!\n"
-#define CAL_K -0.35
 
 static K_SEM_DEFINE(ble_init_ok, 0, 1);
 
@@ -95,25 +193,6 @@ UART_ASYNC_ADAPTER_INST_DEFINE(async_adapter);
 #define async_adapter NULL
 #endif
 
-//ADC
-/* ADC node from the devicetree. */
-#define ADC_NODE DT_ALIAS(adc0)
-
-/* Auxiliary macro to obtain channel vref, if available. */
-#define CHANNEL_VREF(node_id) DT_PROP_OR(node_id, zephyr_vref_mv, 0)
-
-/* Data of ADC device specified in devicetree. */
-static const struct device *adc = DEVICE_DT_GET(ADC_NODE);
-
-/* Data array of ADC channels for the specified ADC. */
-static const struct adc_channel_cfg channel_cfgs[] = {
-	DT_FOREACH_CHILD_SEP(ADC_NODE, ADC_CHANNEL_CFG_DT, (,))};
-
-/* Data array of ADC channel voltage references. */
-static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))};
-
-/* Get the number of channels defined on the DTS. */
-#define CHANNEL_COUNT ARRAY_SIZE(channel_cfgs)
 
 static void uart_cb(const struct device *dev, struct uart_event *evt, void *user_data)
 {
@@ -644,44 +723,71 @@ int main(void)
 	}
 
 	//ADC init
-	uint32_t count = 0;
-	uint16_t channel_reading[CONFIG_SEQUENCE_SAMPLES][CHANNEL_COUNT];
+	//IMU init
+	const struct device *dev = get_6dof_motion_device();
+	//struct sensor_value accel[3];
+	struct sensor_value gyro[3];
+	//struct sensor_value temperature;
+	uint32_t counter = 0;
 
-	uint8_t adc_buffer[12];
+	if (dev == NULL) {
+			return 0;
+	}
+
+	data_trigger = (struct sensor_trigger){
+			.type = SENSOR_TRIG_DATA_READY,
+			.chan = SENSOR_CHAN_ALL,
+	};
+	if (sensor_trigger_set(dev, &data_trigger, handle_6dof_motion_drdy) < 0) {
+			printf("Cannot configure data trigger!!!\n");
+			return 0;
+	}
+
+   //ADC init
+	//uint32_t count = 0;
+	uint16_t channel_reading[CONFIG_SEQUENCE_SAMPLES][CHANNEL_COUNT];
+	uint16_t avg_val_chans[CHANNEL_COUNT];
+	double gyro_y = 0.0;
+	double torque;
+	double power;
+	double rpm;
+	double battery_mv;
+	double battery_percentage;
 
 	/* Options for the sequence sampling. */
 	const struct adc_sequence_options options = {
-		.extra_samplings = CONFIG_SEQUENCE_SAMPLES - 1,
-		.interval_us = 0,
+			.extra_samplings = CONFIG_SEQUENCE_SAMPLES - 1,
+			.interval_us = 0,
 	};
 
 	/* Configure the sampling sequence to be made. */
 	struct adc_sequence sequence = {
-		.buffer = channel_reading,
-		/* buffer size in bytes, not number of samples */
-		.buffer_size = sizeof(channel_reading),
-		.resolution = CONFIG_SEQUENCE_RESOLUTION,
-		.options = &options,
+			.buffer = channel_reading,
+			/* buffer size in bytes, not number of samples */
+			.buffer_size = sizeof(channel_reading),
+			.resolution = CONFIG_SEQUENCE_RESOLUTION,
+			.options = &options,
 	};
 
 	if (!device_is_ready(adc)) {
-		printf("ADC controller device %s not ready\n", adc->name);
-		return 0;
+			printf("ADC controller device %s not ready\n", adc->name);
+			return 0;
 	}
 
 	/* Configure channels individually prior to sampling. */
 	for (size_t i = 0U; i < CHANNEL_COUNT; i++) {
-		sequence.channels |= BIT(channel_cfgs[i].channel_id);
-		err = adc_channel_setup(adc, &channel_cfgs[i]);
-		if (err < 0) {
-			printf("Could not setup channel #%d (%d)\n", i, err);
-			return 0;
-		}
-		if (channel_cfgs[i].reference == ADC_REF_INTERNAL) {
-			vrefs_mv[i] = adc_ref_internal(adc);
-		}
+			sequence.channels |= BIT(channel_cfgs[i].channel_id);
+			err = adc_channel_setup(adc, &channel_cfgs[i]);
+			if (err < 0) {
+					printf("Could not setup channel #%d (%d)\n", i, err);
+					return 0;
+			}
+			if (channel_cfgs[i].reference == ADC_REF_INTERNAL) {
+					vrefs_mv[i] = adc_ref_internal(adc);
+			}
 	}
 
+	//k_sleep(K_MSEC(1000));
 	//end ADC init
 
 
@@ -727,155 +833,99 @@ int main(void)
 		printf("init error\n");
 		return 0;
 	}
-	
-	int32_t cal_final = 0;
 
 	for (;;) {
 		dk_set_led(RUN_STATUS_LED, (++blink_status) % 2);
 		k_sleep(K_MSEC(RUN_LED_BLINK_INTERVAL));
 		
-		/* //printf("This is a packet\n");
-		static int i = 0;
-		while(i==0)
-		{
-			//connection grace period
-			for (int j = 20; j < 30; j++)
-			{
-				printk("Grace period %d/30s\n",j);
-				k_msleep(1000);
-			}
-			
-			struct uart_data_t *cal;
-			int cal_err;
-			cal = k_malloc(sizeof(*cal));
+		counter ++;
+                uint32_t now = k_uptime_get_32();
+                static uint32_t last_time = 0;
+                 /*if (irq_from_device) {
+                         //sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ, accel);
+                         sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
+                         sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &temperature);
+ 
+                         LOG_INF("[%s]: temp %.2f Cel "
+                                "  accel %f %f %f m/s/s "
+                                "  gyro  %f %f %f rad/s\n",
+                                now_str(), sensor_value_to_double(&temperature),
+                                sensor_value_to_double(&accel[0]), sensor_value_to_double(&accel[1]),
+                                sensor_value_to_double(&accel[2]), sensor_value_to_double(&gyro[0]),
+                                sensor_value_to_double(&gyro[1]), sensor_value_to_double(&gyro[2]));
+                           
+                                irq_from_device = 0;
+                 }
+                */
+                 uint32_t elapsed = now - last_time;
+                if (elapsed >= 1000) {
+                        last_time = now;
+                        //printf("Time elapsed: %u ms\n", elapsed);
+                        //printf("Time elapsed: %s\n", now_str());
+                        if(irq_from_device) {
+                                //sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &temperature);
+                                sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
+                                gyro_y = sensor_value_to_double(&gyro[1]);
+                                irq_from_device = 0;
+                        }
 
-			//Calibration
-			if (cal) {
-				cal_err = snprintf(cal->data, sizeof(cal->data),
-						"Starting Cal\r\n");
-				if ((cal_err < 0) || (cal_err >= sizeof(cal->data))) {
-					k_free(cal);
-					printk("snprintf returned %d", cal_err);
-					return -ENOMEM;
-				}
+                        err = adc_read(adc, &sequence);
+                        if (err < 0) {
+                                printf("Could not read (%d)\n", err);
+                                continue;
+                        }
 
-				err = bt_nus_send(NULL, cal->data, sizeof(cal->data));
-				if (err) {
-					printk("Failed to send cal alert1\n");
-				} else {
-					printk("Sent cal alert1 over NUS\n");
-				}
+                        for (size_t channel_index = 0U; channel_index < CHANNEL_COUNT; channel_index++) {
+                                int32_t val_mv;
+                                int32_t avg_val_mv = 0;
+                                /*printf("- %s, channel %" PRId32 ", %" PRId32 " sequence samples:\n",
+                                       adc->name, channel_cfgs[channel_index].channel_id,
+                                       CONFIG_SEQUENCE_SAMPLES);
+                                */
+                                for (size_t sample_index = 0U; sample_index < CONFIG_SEQUENCE_SAMPLES;
+                                     sample_index++) {
+        
+                                        val_mv = channel_reading[sample_index][channel_index];
+                                        //printf("- - %" PRId32, val_mv);
+                                        err = adc_raw_to_millivolts(vrefs_mv[channel_index],
+                                                                    channel_cfgs[channel_index].gain,
+                                                                    CONFIG_SEQUENCE_RESOLUTION, &val_mv);
+                                        
+                                        /* conversion to mV may not be supported, skip if not */
+                                        if ((err < 0) || vrefs_mv[channel_index] == 0) {
+                                                printf(" (value in mV not available)\n");
+                                        } else {
+                                                avg_val_mv += val_mv;
+                                                
+                                                //printf(" = %" PRId32 "mV\n", val_mv);
+                                        }
+                                }
+                                avg_val_mv /= CONFIG_SEQUENCE_SAMPLES;
+                                avg_val_chans[channel_index] = avg_val_mv;
+                                //printf("Average value: %" PRId32 "mV\n", avg_val_mv);
+                        }
+                        torque = avg_val_chans[0] * CAL_SLOPE + CAL_OFFSET;
+                        power = abs(torque) * gyro_y;
+                        rpm = gyro_y * RADS_TO_RPM;
 
-				cal_err = snprintf(cal->data, sizeof(cal->data),
-					"Please Release Pedals\r\n");
-				if ((cal_err < 0) || (cal_err >= sizeof(cal->data))) {
-					k_free(cal);
-					printk("snprintf returned %d", cal_err);
-					return -ENOMEM;
-				}
+                        /*Battery percentage calculation*/
+                        battery_mv = avg_val_chans[1] * DIVIDER_RATIO;
+                        battery_percentage = (battery_mv - BATTERY_MIN) / (BATTERY_MAX - BATTERY_MIN) * 100;
+                        if (battery_percentage < 0) {
+                                battery_percentage = 0;
+                        } else if (battery_percentage > 100) {
+                                battery_percentage = 100;
+                        }
 
-				err = bt_nus_send(NULL, cal->data, sizeof(cal->data));
-				if (err) {
-					printk("Failed to send cal alert2\n");
-				} else {
-					printk("Sent cal alert2 over NUS\n");
-				}
+						char output[32];
+                        snprintf(output, sizeof(output), "%.1f \n%.1f\n%.1f\n%.1f\n",torque, power, rpm, battery_mv);
+						bt_nus_send(NULL, output, sizeof(output));
+                        LOG_INF("%s", output);
+                        //LOG_INF("[%s]\nTorque: %.1f mV\n Power: %.1f W\n Cadence %.1f RPM\n Battery: %.1f mV\n", now_str(), torque, power, rpm, battery_mv);
+                        //printf("Time: %s\n", now_str());
+                        //LOG_INF("Temp: %.2f Cel",sensor_value_to_double(&temperature));
 
-				cal->len = cal_err;
-			} else {
-				printk("Failed to malloc cal\n");
-				return -ENOMEM;
-			}
-			err = adc_read(adc, &sequence);
-			if (err < 0) {
-				printf("Could not read (%d)\n", err);
-				return 0;
-			}
-			int32_t cal_mv;
-			int32_t cal_avg = 0;
-				for (size_t sample_index = 0U; sample_index < CONFIG_SEQUENCE_SAMPLES;
-					sample_index++) {
-					cal_mv = channel_reading[sample_index][0];
-					err = adc_raw_to_millivolts(vrefs_mv[0],
-									channel_cfgs[0].gain,
-									CONFIG_SEQUENCE_RESOLUTION, &cal_mv);
-					if ((err < 0) || vrefs_mv[0] == 0) {
-						printk(" (value in mV not available)\n");
-					} else {
-						printk("%" PRId32 "mV\n", cal_mv);
-						cal_avg += cal_mv;
-					}
-				}
-				cal_avg = cal_avg / CONFIG_SEQUENCE_SAMPLES;
-				printk("Calibration Value: %d\n", cal_avg);
-				cal_final = CAL_K * cal_avg * -1;
-				printk("Calibration Complete\n");
-				printk("Calibration Curve: y = %f * x + %d\n", CAL_K, cal_final);
-				k_free(cal);
-				i=1;
-		}
-		
-
-		printf("ADC sequence reading [%u]:\n", count++);
-		k_msleep(1000);
-
-		err = adc_read(adc, &sequence);
-		if (err < 0) {
-			printk("Could not read (%d)\n", err);
-			continue;
-		}
-		int32_t val_mv;
-		int32_t val_avg[CHANNEL_COUNT] = {0};
-		double torque;
-		for (size_t channel_index = 0U; channel_index < CHANNEL_COUNT; channel_index++) {
-
-			//printf("- %s, channel %" PRId32 ", %" PRId32 " sequence samples:\n",
-			//       adc->name, channel_cfgs[channel_index].channel_id,
-			//       CONFIG_SEQUENCE_SAMPLES);
-			for (size_t sample_index = 0U; sample_index < CONFIG_SEQUENCE_SAMPLES;
-			     sample_index++) {
-
-				val_mv = channel_reading[sample_index][channel_index];
-
-				//printf("- - %" PRId32, val_mv);
-				err = adc_raw_to_millivolts(vrefs_mv[channel_index],
-							    channel_cfgs[channel_index].gain,
-							    CONFIG_SEQUENCE_RESOLUTION, &val_mv);
-
-				// conversion to mV may not be supported, skip if not
-				if ((err < 0) || vrefs_mv[channel_index] == 0) {
-					//printf(" (value in mV not available)\n");
-				} else {
-					//printf(" = %" PRId32 "mV\n", val_mv);
-					val_avg[channel_index] += val_mv;
-				}
-			}
-			val_avg[channel_index] = val_avg[channel_index] / CONFIG_SEQUENCE_SAMPLES;
-			//printf("Average Value: %d\n", val_avg[channel_index]);
-		}
-		printf("val_avg[0]: %d\n", val_avg[0]);
-		printf("Calibration Value: %d\n", cal_final);
-		torque = CAL_K * val_avg[0] + cal_final;
-		char buf[32];
-		gcvt(torque, 6, buf);
-		printf("Torque: %s\n", buf);
-
-		//Must use string for nRF Toolbox
-		//snprintf(buf, sizeof(buf), "%f", torque);
-
-	    int err = bt_nus_send(NULL, buf, sizeof(buf));
-    	if (err) {
-        	printk("Failed to send data over NUS (err %d)\n", err);
-    	} else {
-       		printk("Sent int32_t: %f over NUS\n", torque);
-    	}
-		
-		err = bt_nus_send(NULL, MESSAGE, strlen(MESSAGE));
-		if (err) {
-			printk("Failed to send message: %d\n", err);
-		} else {
-			printk("Message sent successfully!\n");
-		} */
+                }
 		
 	}
 	
