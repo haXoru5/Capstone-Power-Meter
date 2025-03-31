@@ -45,7 +45,13 @@ static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))}
 #define CAL_SLOPE -0.35
 #define CAL_OFFSET 827
 
+/*RPM conversion constant*/
 #define RADS_TO_RPM 9.5493
+
+/*Battery range*/
+#define BATTERY_MIN 3400
+#define BATTERY_MAX 4200
+#define DIVIDER_RATIO 5.5455
 
  /*
   * Get a device structure from a devicetree node from alias
@@ -110,6 +116,7 @@ static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))}
          struct sensor_value accel[3];
          struct sensor_value gyro[3];
          struct sensor_value temperature;
+         uint32_t counter = 0;
  
          if (dev == NULL) {
                  return 0;
@@ -129,10 +136,12 @@ static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))}
          //uint32_t count = 0;
          uint16_t channel_reading[CONFIG_SEQUENCE_SAMPLES][CHANNEL_COUNT];
          uint16_t avg_val_chans[CHANNEL_COUNT];
-         double gyro_y;
+         double gyro_y = 0.0;
          double torque;
          double power;
          double rpm;
+         double battery_mv;
+         double battery_percentage;
  
          /* Options for the sequence sampling. */
          const struct adc_sequence_options options = {
@@ -170,6 +179,7 @@ static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))}
          k_sleep(K_MSEC(1000));
  
          while (1) {
+                counter ++;
                 uint32_t now = k_uptime_get_32();
                 static uint32_t last_time = 0;
                  /*if (irq_from_device) {
@@ -177,7 +187,7 @@ static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))}
                          sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
                          sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &temperature);
  
-                         /*LOG_INF("[%s]: temp %.2f Cel "
+                         LOG_INF("[%s]: temp %.2f Cel "
                                 "  accel %f %f %f m/s/s "
                                 "  gyro  %f %f %f rad/s\n",
                                 now_str(), sensor_value_to_double(&temperature),
@@ -236,9 +246,19 @@ static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))}
                                 //printf("Average value: %" PRId32 "mV\n", avg_val_mv);
                         }
                         torque = avg_val_chans[0] * CAL_SLOPE + CAL_OFFSET;
-                        power = torque * gyro_y;
+                        power = abs(torque) * gyro_y;
                         rpm = gyro_y * RADS_TO_RPM;
-                        LOG_INF("Torque: %.1f mV\n Power: %.1f\n cadence %.1f\n", torque, power, rpm);
+
+                        /*Battery percentage calculation*/
+                        battery_mv = avg_val_chans[1] * DIVIDER_RATIO;
+                        battery_percentage = (battery_mv - BATTERY_MIN) / (BATTERY_MAX - BATTERY_MIN) * 100;
+                        if (battery_percentage < 0) {
+                                battery_percentage = 0;
+                        } else if (battery_percentage > 100) {
+                                battery_percentage = 100;
+                        }
+
+                        LOG_INF("Torque: %.1f mV\n Power: %.1f\n Cadence %.1f\n Battery: %0.1f %%/%d\n", torque, power, rpm, battery_percentage, avg_val_chans[1]);
                         //printf("Time: %s\n", now_str());
                         //LOG_INF("Temp: %.2f Cel",sensor_value_to_double(&temperature));
 
