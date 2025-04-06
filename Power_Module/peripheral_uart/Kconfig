@@ -4,13 +4,6 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-config SEQUENCE_SAMPLES
-	int "Number of samples to be made on the sequence for each channel."
-	default 32
-
-config SEQUENCE_RESOLUTION
-	int "Set the resolution of the sequence readings."
-	default 12
 
 source "Kconfig.zephyr"
 
@@ -18,7 +11,7 @@ menu "Nordic UART BLE GATT service sample"
 
 config SEQUENCE_SAMPLES
 	int "Number of samples to be made on the sequence for each channel."
-	default 5
+	default 32
 
 config SEQUENCE_RESOLUTION
 	int "Set the resolution of the sequence readings."
@@ -32,7 +25,7 @@ config BT_NUS_THREAD_STACK_SIZE
 
 config BT_NUS_UART_BUFFER_SIZE
 	int "UART payload buffer element size"
-	default 40
+	default 240
 	help
 	  Size of the payload buffer in each RX and TX FIFO element
 

@@ -70,8 +70,8 @@ static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))}
 #define CONFIG_SEQUENCE_SAMPLES 32
 
 /*Cal Data*/
-#define CAL_SLOPE -0.35
-#define CAL_OFFSET 827
+#define CAL_SLOPE -0.3
+#define CAL_OFFSET 699
 
 /*RPM conversion constant*/
 #define RADS_TO_RPM 9.5493
@@ -147,7 +147,7 @@ static uint32_t vrefs_mv[] = {DT_FOREACH_CHILD_SEP(ADC_NODE, CHANNEL_VREF, (,))}
 #define DEVICE_NAME_LEN	(sizeof(DEVICE_NAME) - 1)
 
 #define RUN_STATUS_LED DK_LED1
-#define RUN_LED_BLINK_INTERVAL 1000
+#define RUN_LED_BLINK_INTERVAL 25
 
 #define CON_STATUS_LED DK_LED2
 
@@ -746,13 +746,16 @@ int main(void)
    //ADC init
 	//uint32_t count = 0;
 	uint16_t channel_reading[CONFIG_SEQUENCE_SAMPLES][CHANNEL_COUNT];
-	uint16_t avg_val_chans[CHANNEL_COUNT];
-	double gyro_y = 0.0;
+	//uint16_t avg_val_chans[CHANNEL_COUNT];
+	double gyro_x = 0.0;
 	double torque;
 	double power;
 	double rpm;
 	double battery_mv;
 	double battery_percentage;
+	int battery_int = 100;
+	//int adc_logged_flag = 0;
+	static uint16_t torque_max = 0;
 
 	/* Options for the sequence sampling. */
 	const struct adc_sequence_options options = {
@@ -835,96 +838,124 @@ int main(void)
 	}
 
 	for (;;) {
-		dk_set_led(RUN_STATUS_LED, (++blink_status) % 2);
 		k_sleep(K_MSEC(RUN_LED_BLINK_INTERVAL));
 		
 		counter ++;
                 uint32_t now = k_uptime_get_32();
                 static uint32_t last_time = 0;
-                 /*if (irq_from_device) {
-                         //sensor_channel_get(dev, SENSOR_CHAN_ACCEL_XYZ, accel);
-                         sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
-                         sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &temperature);
- 
-                         LOG_INF("[%s]: temp %.2f Cel "
-                                "  accel %f %f %f m/s/s "
-                                "  gyro  %f %f %f rad/s\n",
-                                now_str(), sensor_value_to_double(&temperature),
-                                sensor_value_to_double(&accel[0]), sensor_value_to_double(&accel[1]),
-                                sensor_value_to_double(&accel[2]), sensor_value_to_double(&gyro[0]),
-                                sensor_value_to_double(&gyro[1]), sensor_value_to_double(&gyro[2]));
-                           
-                                irq_from_device = 0;
-                 }
-                */
-                 uint32_t elapsed = now - last_time;
-                if (elapsed >= 1000) {
+
+                uint32_t elapsed = now - last_time;
+
+				//ADC read at ~40Hz
+				err = adc_read(adc, &sequence);
+				if (err < 0) {
+						printf("Could not read (%d)\n", err);
+						continue;
+				}
+
+					int32_t val_mv_torque;
+					int32_t avg_val_torque = 0;
+					/*printf("- %s, channel %" PRId32 ", %" PRId32 " sequence samples:\n",
+							adc->name, channel_cfgs[channel_index].channel_id,
+							CONFIG_SEQUENCE_SAMPLES);
+					*/
+					for (size_t sample_index = 0U; sample_index < CONFIG_SEQUENCE_SAMPLES;
+							sample_index++) {
+
+							val_mv_torque = channel_reading[sample_index][0];
+							//printf("- - %" PRId32, val_mv);
+							err = adc_raw_to_millivolts(vrefs_mv[0],
+														channel_cfgs[0].gain,
+														CONFIG_SEQUENCE_RESOLUTION, &val_mv_torque);
+							
+							/* conversion to mV may not be supported, skip if not */
+							if ((err < 0) || vrefs_mv[0] == 0) {
+									printf(" (value in mV not available)\n");
+							} else {
+									avg_val_torque += val_mv_torque;
+									
+									//printf(" = %" PRId32 "mV\n", val_mv);
+							}
+					}
+					avg_val_torque /= CONFIG_SEQUENCE_SAMPLES;
+
+				if (avg_val_torque > torque_max) {
+						torque_max = avg_val_torque;
+				}
+
+            
+    if (elapsed >= 1000) {
+						dk_set_led(RUN_STATUS_LED, (++blink_status) % 2);
                         last_time = now;
                         //printf("Time elapsed: %u ms\n", elapsed);
                         //printf("Time elapsed: %s\n", now_str());
                         if(irq_from_device) {
                                 //sensor_channel_get(dev, SENSOR_CHAN_DIE_TEMP, &temperature);
                                 sensor_channel_get(dev, SENSOR_CHAN_GYRO_XYZ, gyro);
-                                gyro_y = sensor_value_to_double(&gyro[1]);
+                                gyro_x = sensor_value_to_double(&gyro[0]);
                                 irq_from_device = 0;
                         }
 
-                        err = adc_read(adc, &sequence);
-                        if (err < 0) {
-                                printf("Could not read (%d)\n", err);
-                                continue;
-                        }
+						int32_t val_mv_batt;
+						int32_t avg_val_batt = 0;
+						/*printf("- %s, channel %" PRId32 ", %" PRId32 " sequence samples:\n",
+								adc->name, channel_cfgs[channel_index].channel_id,
+								CONFIG_SEQUENCE_SAMPLES);
+						*/
 
-                        for (size_t channel_index = 0U; channel_index < CHANNEL_COUNT; channel_index++) {
-                                int32_t val_mv;
-                                int32_t avg_val_mv = 0;
-                                /*printf("- %s, channel %" PRId32 ", %" PRId32 " sequence samples:\n",
-                                       adc->name, channel_cfgs[channel_index].channel_id,
-                                       CONFIG_SEQUENCE_SAMPLES);
-                                */
-                                for (size_t sample_index = 0U; sample_index < CONFIG_SEQUENCE_SAMPLES;
-                                     sample_index++) {
-        
-                                        val_mv = channel_reading[sample_index][channel_index];
-                                        //printf("- - %" PRId32, val_mv);
-                                        err = adc_raw_to_millivolts(vrefs_mv[channel_index],
-                                                                    channel_cfgs[channel_index].gain,
-                                                                    CONFIG_SEQUENCE_RESOLUTION, &val_mv);
-                                        
-                                        /* conversion to mV may not be supported, skip if not */
-                                        if ((err < 0) || vrefs_mv[channel_index] == 0) {
-                                                printf(" (value in mV not available)\n");
-                                        } else {
-                                                avg_val_mv += val_mv;
-                                                
-                                                //printf(" = %" PRId32 "mV\n", val_mv);
-                                        }
-                                }
-                                avg_val_mv /= CONFIG_SEQUENCE_SAMPLES;
-                                avg_val_chans[channel_index] = avg_val_mv;
-                                //printf("Average value: %" PRId32 "mV\n", avg_val_mv);
-                        }
-                        torque = avg_val_chans[0] * CAL_SLOPE + CAL_OFFSET;
-                        power = abs(torque) * gyro_y;
-                        rpm = gyro_y * RADS_TO_RPM;
+						for (size_t sample_index = 0U; sample_index < CONFIG_SEQUENCE_SAMPLES;
+								sample_index++) {
+
+								val_mv_batt = channel_reading[sample_index][1];
+								//printf("- - %" PRId32, val_mv);
+								err = adc_raw_to_millivolts(vrefs_mv[1],
+															channel_cfgs[1].gain,
+															CONFIG_SEQUENCE_RESOLUTION, &val_mv_batt);
+								
+								/* conversion to mV may not be supported, skip if not */
+								if ((err < 0) || vrefs_mv[1] == 0) {
+										printf(" (value in mV not available)\n");
+								} else {
+										avg_val_batt += val_mv_batt;
+										
+										//printf(" = %" PRId32 "mV\n", val_mv);
+								}
+						}
+						avg_val_batt /= CONFIG_SEQUENCE_SAMPLES;
+						//printf("Average value: %" PRId32 "mV\n", avg_val_mv);
+
+                        torque = torque_max * CAL_SLOPE + CAL_OFFSET;
+                        power = abs(torque) * gyro_x;
+                        rpm = gyro_x * RADS_TO_RPM;
 
                         /*Battery percentage calculation*/
-                        battery_mv = avg_val_chans[1] * DIVIDER_RATIO;
+                        battery_mv = avg_val_batt * DIVIDER_RATIO;
                         battery_percentage = (battery_mv - BATTERY_MIN) / (BATTERY_MAX - BATTERY_MIN) * 100;
                         if (battery_percentage < 0) {
-                                battery_percentage = 0;
+                                battery_int = 0;
                         } else if (battery_percentage > 100) {
-                                battery_percentage = 100;
-                        }
-
-						char output[32];
-                        snprintf(output, sizeof(output), "%.1f \n%.1f\n%.1f\n%.1f\n",torque, power, rpm, battery_mv);
-						bt_nus_send(NULL, output, sizeof(output));
+                                battery_int = 100;
+                        } else {
+								battery_int = (int)(battery_percentage / 10) * 10;
+						}
+						/*Output Format
+						Trip Time: 0.0 s
+						Torque: 0.0 mV
+						Power: 0.0 W
+						Cadence: 0.0 RPM
+						Battery: 0.0 %
+						Potentially we could stop trip if cadence is 0 for a while
+						But would need GPS otherwise could pause going downhill
+						*/
+						char output[128];
+                        int packet_len = snprintf(output, sizeof(output), "Time:\t%s\nTorque:\t\t%.1fmV\nPower:\t\t%.1fW\nCadence:\t%.1fRPM\nBattery:\t%d%%",now_str(),torque, power, rpm, battery_int);
+						bt_nus_send(NULL, output, packet_len);
                         LOG_INF("%s", output);
                         //LOG_INF("[%s]\nTorque: %.1f mV\n Power: %.1f W\n Cadence %.1f RPM\n Battery: %.1f mV\n", now_str(), torque, power, rpm, battery_mv);
                         //printf("Time: %s\n", now_str());
                         //LOG_INF("Temp: %.2f Cel",sensor_value_to_double(&temperature));
-
+						torque_max = 0;
+						//adc_logged_flag = 1;
                 }
 		
 	}
